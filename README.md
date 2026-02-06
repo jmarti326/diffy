@@ -1,6 +1,6 @@
 # Diffy - Cross-Platform File Comparison Tool
 
-A minimalistic file and text comparison application built with .NET and Avalonia UI. Similar to Beyond Compare, it provides side-by-side diff visualization.
+A minimalistic file and text comparison application built with .NET and Avalonia UI, providing side-by-side diff visualization with character-level highlighting.
 
 ## Features
 
