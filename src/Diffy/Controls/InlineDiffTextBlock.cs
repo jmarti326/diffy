@@ -4,6 +4,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Diffy.Models;
 
 namespace Diffy.Controls;
@@ -24,6 +25,9 @@ public class InlineDiffTextBlock : Control
     public static readonly StyledProperty<double> FontSizeProperty =
         AvaloniaProperty.Register<InlineDiffTextBlock, double>(nameof(FontSize), 12);
 
+    public static readonly StyledProperty<IBrush?> ForegroundProperty =
+        AvaloniaProperty.Register<InlineDiffTextBlock, IBrush?>(nameof(Foreground));
+
     public DiffLine? DiffLine
     {
         get => GetValue(DiffLineProperty);
@@ -42,6 +46,12 @@ public class InlineDiffTextBlock : Control
         set => SetValue(FontSizeProperty, value);
     }
 
+    public IBrush? Foreground
+    {
+        get => GetValue(ForegroundProperty);
+        set => SetValue(ForegroundProperty, value);
+    }
+
     // Colors for highlighting - more visible than line-level backgrounds
     private static readonly IBrush UnchangedBackground = Brushes.Transparent;
     private static readonly IBrush InsertedBackground = new SolidColorBrush(Color.FromArgb(120, 0, 180, 0));
@@ -50,8 +60,19 @@ public class InlineDiffTextBlock : Control
 
     static InlineDiffTextBlock()
     {
-        AffectsRender<InlineDiffTextBlock>(DiffLineProperty, FontFamilyProperty, FontSizeProperty);
+        AffectsRender<InlineDiffTextBlock>(DiffLineProperty, FontFamilyProperty, FontSizeProperty, ForegroundProperty);
         AffectsMeasure<InlineDiffTextBlock>(DiffLineProperty, FontFamilyProperty, FontSizeProperty);
+    }
+
+    private IBrush GetForegroundBrush()
+    {
+        // Use set Foreground, or detect theme and pick appropriate color
+        if (Foreground != null)
+            return Foreground;
+        
+        var app = Application.Current;
+        var isDark = app?.ActualThemeVariant == ThemeVariant.Dark;
+        return isDark ? Brushes.White : Brushes.Black;
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -67,7 +88,7 @@ public class InlineDiffTextBlock : Control
             FlowDirection.LeftToRight,
             typeface,
             FontSize,
-            Brushes.Black);
+            GetForegroundBrush());
 
         return new Size(formattedText.Width, formattedText.Height);
     }
@@ -81,6 +102,7 @@ public class InlineDiffTextBlock : Control
             return;
 
         var typeface = new Typeface(FontFamily);
+        var foreground = GetForegroundBrush();
         double x = 0;
 
         // If we have character-level segments, render them with individual highlighting
@@ -97,7 +119,7 @@ public class InlineDiffTextBlock : Control
                     FlowDirection.LeftToRight,
                     typeface,
                     FontSize,
-                    Brushes.Black);
+                    foreground);
 
                 var background = GetBackgroundBrush(segment.Type);
                 var rect = new Rect(x, 0, formattedText.Width, formattedText.Height);
@@ -125,7 +147,7 @@ public class InlineDiffTextBlock : Control
                     FlowDirection.LeftToRight,
                     typeface,
                     FontSize,
-                    Brushes.Black);
+                    foreground);
 
                 context.DrawText(formattedText, new Point(0, 0));
             }

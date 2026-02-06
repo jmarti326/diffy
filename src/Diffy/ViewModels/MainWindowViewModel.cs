@@ -1,6 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Diffy.Models;
@@ -120,6 +122,18 @@ public partial class MainWindowViewModel : ViewModelBase
         (LeftText, RightText) = (RightText, LeftText);
         (LeftFilePath, RightFilePath) = (RightFilePath, LeftFilePath);
         Compare();
+    }
+    
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        var app = Application.Current;
+        if (app == null) return;
+        
+        // Toggle between Light and Dark themes
+        app.RequestedThemeVariant = app.ActualThemeVariant == ThemeVariant.Dark 
+            ? ThemeVariant.Light 
+            : ThemeVariant.Dark;
     }
     
     private async Task<IStorageFile?> PickFileAsync()
