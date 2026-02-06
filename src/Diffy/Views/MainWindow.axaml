@@ -1,0 +1,183 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Diffy.ViewModels"
+        xmlns:models="using:Diffy.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="Diffy.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Diffy - File Comparison Tool"
+        MinWidth="800"
+        MinHeight="500">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+    
+    <Window.Styles>
+        <!-- Diff line styles -->
+        <Style Selector="Border.diff-unchanged">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Border.diff-inserted">
+            <Setter Property="Background" Value="#30008000"/>
+        </Style>
+        <Style Selector="Border.diff-deleted">
+            <Setter Property="Background" Value="#30FF0000"/>
+        </Style>
+        <Style Selector="Border.diff-modified">
+            <Setter Property="Background" Value="#30FFA500"/>
+        </Style>
+        <Style Selector="Border.diff-imaginary">
+            <Setter Property="Background" Value="#20808080"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="#F0F0F0" Padding="10" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Command="{Binding LoadLeftFileCommand}" Content="📂 Load Left" ToolTip.Tip="Load left file"/>
+                <Button Command="{Binding LoadRightFileCommand}" Content="📂 Load Right" ToolTip.Tip="Load right file"/>
+                <Separator Width="1" Background="#CCCCCC"/>
+                <Button Command="{Binding CompareCommand}" Content="🔍 Compare" ToolTip.Tip="Compare texts"/>
+                <Button Command="{Binding SwapSidesCommand}" Content="⇄ Swap" ToolTip.Tip="Swap left and right"/>
+                <Button Command="{Binding ClearCommand}" Content="🗑 Clear" ToolTip.Tip="Clear all"/>
+                <Separator Width="1" Background="#CCCCCC"/>
+                <!-- Statistics -->
+                <Border Background="#E8FFE8" CornerRadius="3" Padding="8,4">
+                    <TextBlock Text="{Binding InsertedCount, StringFormat='+ {0}'}" Foreground="Green"/>
+                </Border>
+                <Border Background="#FFE8E8" CornerRadius="3" Padding="8,4">
+                    <TextBlock Text="{Binding DeletedCount, StringFormat='- {0}'}" Foreground="Red"/>
+                </Border>
+                <Border Background="#FFF0D0" CornerRadius="3" Padding="8,4">
+                    <TextBlock Text="{Binding ModifiedCount, StringFormat='~ {0}'}" Foreground="DarkOrange"/>
+                </Border>
+            </StackPanel>
+        </Border>
+        
+        <!-- Main Content - Split View -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,5,*">
+            
+            <!-- Left Panel -->
+            <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
+                <Border Grid.Row="0" Background="#E8E8E8" Padding="10,5">
+                    <TextBlock Text="{Binding LeftFilePath}" FontWeight="SemiBold"/>
+                </Border>
+                
+                <!-- Left Text Input -->
+                <TextBox Grid.Row="1" 
+                         Text="{Binding LeftText}" 
+                         AcceptsReturn="True"
+                         AcceptsTab="True"
+                         TextWrapping="NoWrap"
+                         FontFamily="Consolas, Courier New, monospace"
+                         FontSize="13"
+                         Watermark="Paste or type left text here..."
+                         BorderThickness="0"/>
+                
+                <!-- Left Diff View -->
+                <ScrollViewer Grid.Row="2" 
+                              MaxHeight="300"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding LeftDiffLines.Count}">
+                    <ItemsControl ItemsSource="{Binding LeftDiffLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:DiffLine">
+                                <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
+                                        Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
+                                        Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
+                                        Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
+                                        Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
+                                        Padding="5,2">
+                                    <Grid ColumnDefinitions="40,*">
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="{Binding LineNumber}" 
+                                                   Foreground="Gray" 
+                                                   FontFamily="Consolas, Courier New, monospace"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding Text}" 
+                                                   FontFamily="Consolas, Courier New, monospace"
+                                                   FontSize="12"
+                                                   TextWrapping="NoWrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+            
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" 
+                          Background="#CCCCCC" 
+                          ResizeDirection="Columns"/>
+            
+            <!-- Right Panel -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
+                <Border Grid.Row="0" Background="#E8E8E8" Padding="10,5">
+                    <TextBlock Text="{Binding RightFilePath}" FontWeight="SemiBold"/>
+                </Border>
+                
+                <!-- Right Text Input -->
+                <TextBox Grid.Row="1" 
+                         Text="{Binding RightText}" 
+                         AcceptsReturn="True"
+                         AcceptsTab="True"
+                         TextWrapping="NoWrap"
+                         FontFamily="Consolas, Courier New, monospace"
+                         FontSize="13"
+                         Watermark="Paste or type right text here..."
+                         BorderThickness="0"/>
+                
+                <!-- Right Diff View -->
+                <ScrollViewer Grid.Row="2" 
+                              MaxHeight="300"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding RightDiffLines.Count}">
+                    <ItemsControl ItemsSource="{Binding RightDiffLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:DiffLine">
+                                <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
+                                        Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
+                                        Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
+                                        Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
+                                        Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
+                                        Padding="5,2">
+                                    <Grid ColumnDefinitions="40,*">
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="{Binding LineNumber}" 
+                                                   Foreground="Gray" 
+                                                   FontFamily="Consolas, Courier New, monospace"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding Text}" 
+                                                   FontFamily="Consolas, Courier New, monospace"
+                                                   FontSize="12"
+                                                   TextWrapping="NoWrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#F0F0F0" Padding="10,5" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="#666666"/>
+        </Border>
+    </Grid>
+</Window>
