@@ -11,7 +11,7 @@ namespace Diffy.Controls;
 
 /// <summary>
 /// A custom control that renders text with character-level diff highlighting.
-/// Similar to Beyond Compare's inline diff highlighting.
+/// Highlights individual changed characters within modified lines.
 /// </summary>
 public class InlineDiffTextBlock : Control
 {
