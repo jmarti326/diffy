@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Diffy.Models;
 using DiffPlex;
@@ -39,20 +40,24 @@ public class DiffService : IDiffService
             
             // Left side
             var leftDiffType = ConvertChangeType(oldLine.Type);
+            var leftSegments = ExtractSegments(oldLine, leftDiffType);
             result.LeftLines.Add(new DiffLine(
                 oldLine.Type != ChangeType.Imaginary ? leftLineNum++ : null,
                 oldLine.Text ?? "",
-                leftDiffType
+                leftDiffType,
+                leftSegments
             ));
             
             // Right side
             if (newLine != null)
             {
                 var rightDiffType = ConvertChangeType(newLine.Type);
+                var rightSegments = ExtractSegments(newLine, rightDiffType);
                 result.RightLines.Add(new DiffLine(
                     newLine.Type != ChangeType.Imaginary ? rightLineNum++ : null,
                     newLine.Text ?? "",
-                    rightDiffType
+                    rightDiffType,
+                    rightSegments
                 ));
             }
             
@@ -76,10 +81,14 @@ public class DiffService : IDiffService
         {
             var newLine = diff.NewText.Lines[i];
             result.LeftLines.Add(new DiffLine(null, "", DiffType.Imaginary));
+            
+            var rightDiffType = ConvertChangeType(newLine.Type);
+            var rightSegments = ExtractSegments(newLine, rightDiffType);
             result.RightLines.Add(new DiffLine(
                 newLine.Type != ChangeType.Imaginary ? rightLineNum++ : null,
                 newLine.Text ?? "",
-                ConvertChangeType(newLine.Type)
+                rightDiffType,
+                rightSegments
             ));
         }
 
@@ -87,6 +96,31 @@ public class DiffService : IDiffService
         result.InsertedCount = diff.NewText.Lines.Count(l => l.Type == ChangeType.Inserted);
 
         return result;
+    }
+
+    /// <summary>
+    /// Extracts character-level segments from a DiffPiece for inline highlighting.
+    /// </summary>
+    private static List<DiffSegment> ExtractSegments(DiffPiece piece, DiffType lineType)
+    {
+        var segments = new List<DiffSegment>();
+        
+        // Only extract segments for modified lines that have SubPieces
+        if (lineType != DiffType.Modified || piece.SubPieces == null || piece.SubPieces.Count == 0)
+        {
+            return segments;
+        }
+        
+        foreach (var subPiece in piece.SubPieces)
+        {
+            if (string.IsNullOrEmpty(subPiece.Text))
+                continue;
+                
+            var segmentType = ConvertChangeType(subPiece.Type);
+            segments.Add(new DiffSegment(subPiece.Text, segmentType));
+        }
+        
+        return segments;
     }
 
     private static DiffType ConvertChangeType(ChangeType changeType)
