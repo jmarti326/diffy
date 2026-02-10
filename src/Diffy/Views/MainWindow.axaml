@@ -9,7 +9,7 @@
         x:Class="Diffy.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Diffy - File Comparison Tool"
+        Title="{Binding WindowTitle}"
         MinWidth="800"
         MinHeight="500"
         Background="{DynamicResource SystemRegionBrush}">
