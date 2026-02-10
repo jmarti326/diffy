@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
@@ -18,6 +19,19 @@ namespace Diffy.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IDiffService _diffService;
+    
+    /// <summary>
+    /// Gets the application version from the assembly.
+    /// </summary>
+    public static string AppVersion => Assembly.GetExecutingAssembly()
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) 
+        ?? "1.0.0";
+    
+    /// <summary>
+    /// Gets the window title including version.
+    /// </summary>
+    public string WindowTitle => $"Diffy v{AppVersion} - File Comparison Tool";
     
     [ObservableProperty]
     private string _leftText = "";

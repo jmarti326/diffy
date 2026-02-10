@@ -5,6 +5,18 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    
+    <!-- Versioning: Semantic Versioning (MAJOR.MINOR.PATCH) -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    
+    <!-- Package/Product metadata -->
+    <Product>Diffy</Product>
+    <Description>A file comparison tool built with Avalonia</Description>
+    <Authors>jmarti326</Authors>
+    <Copyright>Copyright © 2026</Copyright>
+    <RepositoryUrl>https://github.com/jmarti326/diffy</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
