@@ -35,6 +35,24 @@
         <Style Selector="Border.diff-imaginary">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
         </Style>
+        
+        <!-- ListBox styles for diff selection -->
+        <Style Selector="ListBox.diff-list">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.diff-list ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.diff-list ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#40007ACC"/>
+        </Style>
+        <Style Selector="ListBox.diff-list ListBoxItem:selected:focus /template/ ContentPresenter">
+            <Setter Property="Background" Value="#60007ACC"/>
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -66,6 +84,11 @@
                 <Separator Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
                 <!-- Theme Toggle -->
                 <Button Command="{Binding ToggleThemeCommand}" Content="🌓 Theme" ToolTip.Tip="Toggle light/dark theme"/>
+                <Separator Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+                <!-- Copy Options -->
+                <Button Command="{Binding CopyLeftCommand}" Content="📋 Copy Left" ToolTip.Tip="Copy left text to clipboard"/>
+                <Button Command="{Binding CopyRightCommand}" Content="📋 Copy Right" ToolTip.Tip="Copy right text to clipboard"/>
+                <Button Command="{Binding CopyUnifiedDiffCommand}" Content="📋 Copy Diff" ToolTip.Tip="Copy unified diff to clipboard"/>
             </StackPanel>
         </Border>
         
@@ -92,38 +115,51 @@
                          BorderThickness="0"/>
                 
                 <!-- Left Diff View -->
-                <ScrollViewer Grid.Row="2" 
-                              MaxHeight="300"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              IsVisible="{Binding LeftDiffLines.Count}">
-                    <ItemsControl ItemsSource="{Binding LeftDiffLines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="models:DiffLine">
-                                <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
-                                        Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
-                                        Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
-                                        Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
-                                        Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
-                                        Padding="5,2">
-                                    <Grid ColumnDefinitions="40,*">
-                                        <TextBlock Grid.Column="0" 
-                                                   Text="{Binding LineNumber}" 
-                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" 
-                                                   FontFamily="Consolas, Courier New, monospace"
-                                                   FontSize="12"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="0,0,10,0"/>
-                                        <controls:InlineDiffTextBlock Grid.Column="1" 
-                                                   DiffLine="{Binding}" 
-                                                   FontFamily="Consolas, Courier New, monospace"
-                                                   FontSize="12"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <ListBox x:Name="LeftDiffList"
+                         Grid.Row="2" 
+                         Classes="diff-list"
+                         MaxHeight="300"
+                         ItemsSource="{Binding LeftDiffLines}"
+                         SelectionMode="Multiple"
+                         IsVisible="{Binding LeftDiffLines.Count}">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy Line" 
+                                      Command="{Binding CopyLineCommand}" 
+                                      CommandParameter="{Binding #LeftDiffList.SelectedItem}"/>
+                            <MenuItem Header="Copy Line with Number" 
+                                      Command="{Binding CopyLineWithNumberCommand}" 
+                                      CommandParameter="{Binding #LeftDiffList.SelectedItem}"/>
+                            <Separator/>
+                            <MenuItem Header="Copy Selected Lines" 
+                                      Command="{Binding CopySelectedLeftLinesCommand}"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="models:DiffLine">
+                            <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
+                                    Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
+                                    Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
+                                    Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
+                                    Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
+                                    Padding="5,2">
+                                <Grid ColumnDefinitions="40,*">
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding LineNumber}" 
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" 
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="12"
+                                               HorizontalAlignment="Right"
+                                               Margin="0,0,10,0"/>
+                                    <controls:InlineDiffTextBlock Grid.Column="1" 
+                                               DiffLine="{Binding}" 
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="12"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
             
             <!-- Splitter -->
@@ -151,38 +187,51 @@
                          BorderThickness="0"/>
                 
                 <!-- Right Diff View -->
-                <ScrollViewer Grid.Row="2" 
-                              MaxHeight="300"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              IsVisible="{Binding RightDiffLines.Count}">
-                    <ItemsControl ItemsSource="{Binding RightDiffLines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="models:DiffLine">
-                                <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
-                                        Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
-                                        Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
-                                        Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
-                                        Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
-                                        Padding="5,2">
-                                    <Grid ColumnDefinitions="40,*">
-                                        <TextBlock Grid.Column="0" 
-                                                   Text="{Binding LineNumber}" 
-                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" 
-                                                   FontFamily="Consolas, Courier New, monospace"
-                                                   FontSize="12"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="0,0,10,0"/>
-                                        <controls:InlineDiffTextBlock Grid.Column="1" 
-                                                   DiffLine="{Binding}" 
-                                                   FontFamily="Consolas, Courier New, monospace"
-                                                   FontSize="12"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <ListBox x:Name="RightDiffList"
+                         Grid.Row="2" 
+                         Classes="diff-list"
+                         MaxHeight="300"
+                         ItemsSource="{Binding RightDiffLines}"
+                         SelectionMode="Multiple"
+                         IsVisible="{Binding RightDiffLines.Count}">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy Line" 
+                                      Command="{Binding CopyLineCommand}" 
+                                      CommandParameter="{Binding #RightDiffList.SelectedItem}"/>
+                            <MenuItem Header="Copy Line with Number" 
+                                      Command="{Binding CopyLineWithNumberCommand}" 
+                                      CommandParameter="{Binding #RightDiffList.SelectedItem}"/>
+                            <Separator/>
+                            <MenuItem Header="Copy Selected Lines" 
+                                      Command="{Binding CopySelectedRightLinesCommand}"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="models:DiffLine">
+                            <Border Classes.diff-unchanged="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsUnchanged}}"
+                                    Classes.diff-inserted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsInserted}}"
+                                    Classes.diff-deleted="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsDeleted}}"
+                                    Classes.diff-modified="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsModified}}"
+                                    Classes.diff-imaginary="{Binding Type, Converter={x:Static vm:DiffTypeConverters.IsImaginary}}"
+                                    Padding="5,2">
+                                <Grid ColumnDefinitions="40,*">
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding LineNumber}" 
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" 
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="12"
+                                               HorizontalAlignment="Right"
+                                               Margin="0,0,10,0"/>
+                                    <controls:InlineDiffTextBlock Grid.Column="1" 
+                                               DiffLine="{Binding}" 
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="12"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
         </Grid>
         

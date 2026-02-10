@@ -1,6 +1,11 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -46,6 +51,13 @@ public partial class MainWindowViewModel : ViewModelBase
     
     // Storage provider will be set from the View
     public IStorageProvider? StorageProvider { get; set; }
+    
+    // Clipboard will be set from the View
+    public IClipboard? Clipboard { get; set; }
+    
+    // Selected lines for copy functionality (set from View)
+    public IList<DiffLine> SelectedLeftLines { get; set; } = new List<DiffLine>();
+    public IList<DiffLine> SelectedRightLines { get; set; } = new List<DiffLine>();
     
     public MainWindowViewModel()
     {
@@ -134,6 +146,141 @@ public partial class MainWindowViewModel : ViewModelBase
         app.RequestedThemeVariant = app.ActualThemeVariant == ThemeVariant.Dark 
             ? ThemeVariant.Light 
             : ThemeVariant.Dark;
+    }
+    
+    [RelayCommand]
+    private async Task CopyLeft()
+    {
+        await CopyToClipboardAsync(LeftText);
+        StatusMessage = "Left text copied to clipboard";
+    }
+    
+    [RelayCommand]
+    private async Task CopyRight()
+    {
+        await CopyToClipboardAsync(RightText);
+        StatusMessage = "Right text copied to clipboard";
+    }
+    
+    [RelayCommand]
+    private async Task CopyUnifiedDiff()
+    {
+        if (LeftDiffLines.Count == 0 && RightDiffLines.Count == 0)
+        {
+            StatusMessage = "No diff to copy - run Compare first";
+            return;
+        }
+        
+        var unifiedDiff = GenerateUnifiedDiff();
+        await CopyToClipboardAsync(unifiedDiff);
+        StatusMessage = "Unified diff copied to clipboard";
+    }
+    
+    [RelayCommand]
+    private async Task CopySelectedLeftLines()
+    {
+        await CopySelectedLinesAsync(SelectedLeftLines, "left");
+    }
+    
+    [RelayCommand]
+    private async Task CopySelectedRightLines()
+    {
+        await CopySelectedLinesAsync(SelectedRightLines, "right");
+    }
+    
+    [RelayCommand]
+    private async Task CopyLine(DiffLine? line)
+    {
+        if (line == null || string.IsNullOrEmpty(line.Text))
+        {
+            StatusMessage = "No text to copy";
+            return;
+        }
+        
+        await CopyToClipboardAsync(line.Text);
+        StatusMessage = "Line copied to clipboard";
+    }
+    
+    [RelayCommand]
+    private async Task CopyLineWithNumber(DiffLine? line)
+    {
+        if (line == null)
+        {
+            StatusMessage = "No line to copy";
+            return;
+        }
+        
+        var text = line.LineNumber.HasValue 
+            ? $"{line.LineNumber}: {line.Text}" 
+            : line.Text;
+        await CopyToClipboardAsync(text);
+        StatusMessage = "Line with number copied to clipboard";
+    }
+    
+    private async Task CopySelectedLinesAsync(IList<DiffLine> selectedLines, string side)
+    {
+        if (selectedLines.Count == 0)
+        {
+            StatusMessage = "No lines selected";
+            return;
+        }
+        
+        var text = string.Join(Environment.NewLine, 
+            selectedLines.OrderBy(l => l.LineNumber ?? int.MaxValue)
+                         .Select(l => l.Text));
+        await CopyToClipboardAsync(text);
+        
+        var lineWord = selectedLines.Count == 1 ? "line" : "lines";
+        StatusMessage = $"{selectedLines.Count} {side} {lineWord} copied to clipboard";
+    }
+    
+    private string GenerateUnifiedDiff()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"--- {LeftFilePath}");
+        sb.AppendLine($"+++ {RightFilePath}");
+        
+        // Process left side for deletions and unchanged
+        foreach (var line in LeftDiffLines)
+        {
+            switch (line.Type)
+            {
+                case DiffType.Deleted:
+                    sb.AppendLine($"-{line.Text}");
+                    break;
+                case DiffType.Modified:
+                    sb.AppendLine($"-{line.Text}");
+                    break;
+                case DiffType.Unchanged:
+                    sb.AppendLine($" {line.Text}");
+                    break;
+            }
+        }
+        
+        // Append insertions and modifications from right side
+        sb.AppendLine();
+        foreach (var line in RightDiffLines)
+        {
+            switch (line.Type)
+            {
+                case DiffType.Inserted:
+                    sb.AppendLine($"+{line.Text}");
+                    break;
+                case DiffType.Modified:
+                    sb.AppendLine($"+{line.Text}");
+                    break;
+            }
+        }
+        
+        return sb.ToString().TrimEnd();
+    }
+    
+    private async Task CopyToClipboardAsync(string text)
+    {
+        if (Clipboard != null)
+        {
+            await Clipboard.SetTextAsync(text);
+        }
     }
     
     private async Task<IStorageFile?> PickFileAsync()
